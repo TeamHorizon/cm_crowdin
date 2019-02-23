@@ -3,7 +3,7 @@
 # crowdin_sync.py
 #
 # Updates Crowdin source translations and pushes translations
-# directly to LineageOS' Gerrit.
+# directly to XenonHD Gerrit.
 #
 # Copyright (C) 2014-2016 The CyanogenMod Project
 # Copyright (C) 2017-2018 The LineageOS Project
@@ -76,7 +76,7 @@ def push_as_commit(base_path, path, name, branch, username):
 
     # Create commit; if it fails, probably empty so skipping
     try:
-        repo.git.commit(m='Automatic translation import')
+        repo.git.commit(m='New XenonHD translations')
     except:
         print('Failed to create commit for %s, probably empty: skipping'
               % name, file=sys.stderr)
@@ -84,7 +84,7 @@ def push_as_commit(base_path, path, name, branch, username):
 
     # Push commit
     try:
-        repo.git.push('ssh://%s@review.lineageos.org:29418/%s' % (username, name),
+        repo.git.push('ssh://%s@gerrit.xenonhd.com:29418/%s' % (username, name),
                       'HEAD:refs/for/%s%%topic=translation' % branch)
         print('Successfully pushed commit for %s' % name)
     except:
@@ -112,9 +112,9 @@ def find_xml(base_path):
 
 def parse_args():
     parser = argparse.ArgumentParser(
-        description="Synchronising LineageOS' translations with Crowdin")
+        description="Synchronising XenonHD's translations with Crowdin")
     parser.add_argument('-u', '--username', help='Gerrit username')
-    parser.add_argument('-b', '--branch', help='LineageOS branch',
+    parser.add_argument('-b', '--branch', help='XenonHD branch',
                         required=True)
     parser.add_argument('-c', '--config', help='Custom yaml config')
     parser.add_argument('--upload-sources', action='store_true',
@@ -171,11 +171,6 @@ def upload_sources_crowdin(branch, config):
                    '--config=%s/config/%s.yaml' % (_DIR, branch),
                    'upload', 'sources', '--branch=%s' % branch])
 
-        print('\nUploading sources to Crowdin (non-AOSP supported languages)')
-        check_run(['crowdin',
-                   '--config=%s/config/%s_aosp.yaml' % (_DIR, branch),
-                   'upload', 'sources', '--branch=%s' % branch])
-
 
 def upload_translations_crowdin(branch, config):
     if config:
@@ -194,14 +189,6 @@ def upload_translations_crowdin(branch, config):
                    '--no-import-duplicates', '--import-eq-suggestions',
                    '--auto-approve-imported'])
 
-        print('\nUploading translations to Crowdin '
-              '(non-AOSP supported languages)')
-        check_run(['crowdin',
-                   '--config=%s/config/%s_aosp.yaml' % (_DIR, branch),
-                   'upload', 'translations', '--branch=%s' % branch,
-                   '--no-import-duplicates', '--import-eq-suggestions',
-                   '--auto-approve-imported'])
-
 
 def download_crowdin(base_path, branch, xml, username, config):
     if config:
@@ -216,20 +203,13 @@ def download_crowdin(base_path, branch, xml, username, config):
                    '--config=%s/config/%s.yaml' % (_DIR, branch),
                    'download', '--branch=%s' % branch])
 
-        print('\nDownloading translations from Crowdin '
-              '(non-AOSP supported languages)')
-        check_run(['crowdin',
-                   '--config=%s/config/%s_aosp.yaml' % (_DIR, branch),
-                   'download', '--branch=%s' % branch])
-
     print('\nCreating a list of pushable translations')
     # Get all files that Crowdin pushed
     paths = []
     if config:
         files = ['%s/config/%s' % (_DIR, config)]
     else:
-        files = ['%s/config/%s.yaml' % (_DIR, branch),
-                 '%s/config/%s_aosp.yaml' % (_DIR, branch)]
+        files = ['%s/config/%s.yaml' % (_DIR, branch)]
     for c in files:
         cmd = ['crowdin', '--config=%s' % c, 'list', 'project',
                '--branch=%s' % branch]
@@ -267,8 +247,7 @@ def download_crowdin(base_path, branch, xml, username, config):
         # project in all_projects and check if it's already in there.
         all_projects.append(result)
 
-        # Search android/default.xml or config/%(branch)_extra_packages.xml
-        # for the project's name
+        # Search manifest/default.xml for the project's name
         for project in items:
             path = project.attributes['path'].value
             if not (result + '/').startswith(path +'/'):
@@ -291,7 +270,7 @@ def main():
     default_branch = args.branch
 
     base_path_branch_suffix = default_branch.replace('-', '_').replace('.', '_').upper()
-    base_path_env = 'LINEAGE_CROWDIN_BASE_PATH_%s' % base_path_branch_suffix
+    base_path_env = 'XENONHD_CROWDIN_BASE_PATH_%s' % base_path_branch_suffix
     base_path = os.getenv(base_path_env)
     if base_path is None:
         cwd = os.getcwd()
@@ -304,30 +283,26 @@ def main():
     if not check_dependencies():
         sys.exit(1)
 
-    xml_android = load_xml(x='%s/android/default.xml' % base_path)
+    xml_android = load_xml(x='%s/manifest/default.xml' % base_path)
     if xml_android is None:
         sys.exit(1)
 
-    xml_extra = load_xml(x='%s/config/%s_extra_packages.xml'
-                           % (_DIR, default_branch))
-    if xml_extra is None:
-        sys.exit(1)
-
-    xml_snippet = load_xml(x='%s/android/snippets/lineage.xml' % base_path)
+    xml_snippet = load_xml(x='%s/manifest/snippets/xenonhd.xml' % base_path)
     if xml_snippet is None:
-        xml_snippet = load_xml(x='%s/android/snippets/cm.xml' % base_path)
+        xml_snippet = load_xml(x='%s/manifest/snippets/lineage.xml' % base_path)
     if xml_snippet is None:
-        xml_snippet = load_xml(x='%s/android/snippets/hal_cm_all.xml' % base_path)
+        xml_snippet = load_xml(x='%s/manifest/snippets/cm.xml' % base_path)
+    if xml_snippet is None:
+        xml_snippet = load_xml(x='%s/manifest/snippets/hal_cm_all.xml' % base_path)
     if xml_snippet is not None:
-        xml_files = (xml_android, xml_snippet, xml_extra)
+        xml_files = (xml_android, xml_snippet)
     else:
-        xml_files = (xml_android, xml_extra)
+        xml_files = (xml_android)
 
     if args.config:
         files = ['%s/config/%s' % (_DIR, args.config)]
     else:
-        files = ['%s/config/%s.yaml' % (_DIR, default_branch),
-                 '%s/config/%s_aosp.yaml' % (_DIR, default_branch)]
+        files = ['%s/config/%s.yaml' % (_DIR, default_branch)]
     if not check_files(files):
         sys.exit(1)
 
