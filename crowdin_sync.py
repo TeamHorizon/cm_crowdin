@@ -237,7 +237,7 @@ def submit_gerrit(branch, username):
         'gerrit', 'query',
         'status:open',
         'branch:{}'.format(branch),
-        'message:"Automatic translation import"',
+        'message:"New XenonHD translations"',
         'topic:translation',
         '--current-patch-set',
         '--format=JSON']
