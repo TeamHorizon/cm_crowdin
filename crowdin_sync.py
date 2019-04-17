@@ -221,7 +221,7 @@ def push_as_commit(config_files, base_path, path, name, branch, username):
 
     # Push commit
     try:
-        repo.git.push('ssh://%s@gerrit.xenonhd.com:29418/%s' % (username, name),
+        repo.git.push('ssh://%s@xenonhd.zyns.com:29418/%s' % (username, name),
                       'HEAD:refs/for/%s%%topic=translation' % branch)
         print('Successfully pushed commit for %s' % name)
     except:
@@ -233,7 +233,7 @@ def push_as_commit(config_files, base_path, path, name, branch, username):
 def submit_gerrit(branch, username):
     # Find all open translation changes
     cmd = ['ssh', '-p', '29418',
-        '{}@gerrit.xenonhd.com'.format(username),
+        '{}@xenonhd.zyns.com'.format(username),
         'gerrit', 'query',
         'status:open',
         'branch:{}'.format(branch),
@@ -255,7 +255,7 @@ def submit_gerrit(branch, username):
             continue
         # Add Code-Review +2 and Verified+1 labels and submit
         cmd = ['ssh', '-p', '29418',
-        '{}@gerrit.xenonhd.com'.format(username),
+        '{}@xenonhd.zyns.com'.format(username),
         'gerrit', 'review',
         '--verified +1',
         '--code-review +2',
